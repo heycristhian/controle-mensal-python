@@ -16,46 +16,20 @@ def read_excel():
     return vendas, gastos_variaveis, gastos_fixos
 
 
-vendas, gastos_variaveis, gastos_fixos = read_excel()
-vendas['ano_mes'] = vendas['DATA ENTREGA'].dt.strftime('%Y-%m')
-
-print(vendas.head())
-print()
-print(gastos_variaveis.head())
-print()
-print(gastos_fixos.head())
-
-months = {}
-
-
-def add_months(key, expiration_date, row, count):
+def add_months(key, expiration_date, row, count, months, index):
     if key not in months.keys():
         months[key] = []
 
     months[key].append({
         'VENDAS': row['VENDAS'],
         'VALORES': row['VALORES'] / count,
+        'PARCELAS':  f'{index}/ {count}',
         'PAGAMENTO': row['PAGAMENTO'],
         'DATA VENCIMENTO': expiration_date.strftime('%d/%m/%Y'),
     })
 
 
-for index, row in vendas.iterrows():
-    actual_date = row['DATA ENTREGA']
-
-    days = list(map(int, str(row['DIAS']).split('/')))
-    count = len(days)
-
-    for day_to_add in days:
-        expiration_date = row['DATA ENTREGA'] + relativedelta(days=day_to_add)
-        key = expiration_date.strftime('%Y-%m')
-
-        add_months(key, expiration_date, row, count)
-
-months = dict(sorted(months.items()))
-
-
-def generate_excel():
+def generate_excel(months):
     # Verificar se o arquivo já existe
     if os.path.isfile(file_path):
         # Carregar o arquivo Excel existente
@@ -80,7 +54,32 @@ def generate_excel():
                 df.to_excel(writer, sheet_name=key, index=False)
 
 
-generate_excel()
+vendas, gastos_variaveis, gastos_fixos = read_excel()
+vendas['ano_mes'] = vendas['DATA ENTREGA'].dt.strftime('%Y-%m')
+
+print(vendas.head())
+print()
+print(gastos_variaveis.head())
+print()
+print(gastos_fixos.head())
+
+months = {}
+
+for index, row in vendas.iterrows():
+    actual_date = row['DATA ENTREGA']
+
+    days = list(map(int, str(row['DIAS']).split('/')))
+    count = len(days)
+
+    for index in range(len(days)):
+        expiration_date = row['DATA ENTREGA'] + relativedelta(days=days[index])
+        key = expiration_date.strftime('%Y-%m')
+
+        add_months(key, expiration_date, row, count, months, index + 1)
+
+months = dict(sorted(months.items()))
+
+generate_excel(months)
 
 print()
 print(json.dumps(months, indent=2))

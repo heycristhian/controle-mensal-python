@@ -24,7 +24,7 @@ def add_months(key, expiration_date, row, count, months, index):
     months[key].append({
         'VENDAS': row['VENDAS'],
         'VALORES': math.ceil((row['VALORES'] / count) * 100) / 100,
-        'PARCELAS': f'{index}/ {count}',
+        'PARCELAS': f'{index}/{count}',
         'PAGAMENTO': row['PAGAMENTO'],
         'DATA VENCIMENTO': expiration_date.strftime('%d/%m/%Y'),
     })

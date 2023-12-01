@@ -1,5 +1,6 @@
 import json
 import os
+import math
 
 import pandas as pd
 from dateutil.relativedelta import relativedelta
@@ -22,7 +23,7 @@ def add_months(key, expiration_date, row, count, months, index):
 
     months[key].append({
         'VENDAS': row['VENDAS'],
-        'VALORES': row['VALORES'] / count,
+        'VALORES': math.ceil((row['VALORES'] / count) * 100) / 100,
         'PARCELAS': f'{index}/ {count}',
         'PAGAMENTO': row['PAGAMENTO'],
         'DATA VENCIMENTO': expiration_date.strftime('%d/%m/%Y'),
@@ -31,7 +32,7 @@ def add_months(key, expiration_date, row, count, months, index):
 
 def generate_excel(months):
     # Tamanho específico que você deseja para a coluna
-    tamanho_coluna = 20
+    column_size = 20
 
     # Verificar se o arquivo já existe
     if os.path.isfile(file_path):
@@ -41,12 +42,13 @@ def generate_excel(months):
             with pd.ExcelWriter(file_path, engine='xlsxwriter') as writer:
                 # Copiar as planilhas existentes para o novo arquivo
                 for sheet_name in xls.sheet_names:
-                    df = xls.parse(sheet_name)
-                    df.to_excel(writer, sheet_name=sheet_name, index=False)
+                    if sheet_name not in months:  # Excluir as planilhas existentes que não estão em months
+                        df = xls.parse(sheet_name)
+                        df.to_excel(writer, sheet_name=sheet_name, index=False)
 
-                    # Ajustar a largura específica da coluna nas planilhas existentes
-                    for col_num in range(len(df.columns)):
-                        writer.sheets[sheet_name].set_column(col_num, col_num, tamanho_coluna)
+                        # Ajustar a largura específica da coluna nas planilhas existentes
+                        for col_num in range(len(df.columns)):
+                            writer.sheets[sheet_name].set_column(col_num, col_num, column_size)
 
                 # Adicionar as novas planilhas
                 for key in months.keys():
@@ -55,8 +57,7 @@ def generate_excel(months):
 
                     # Ajustar a largura específica da coluna nas novas planilhas
                     for col_num in range(len(df.columns)):
-                        writer.sheets[key].set_column(col_num, col_num, tamanho_coluna)
-
+                        writer.sheets[key].set_column(col_num, col_num, column_size)
     else:
         # Se o arquivo não existir, criar um novo
         with pd.ExcelWriter(file_path, engine='xlsxwriter') as writer:
@@ -66,7 +67,7 @@ def generate_excel(months):
 
                 # Ajustar a largura específica da coluna nas novas planilhas
                 for col_num in range(len(df.columns)):
-                    writer.sheets[key].set_column(col_num, col_num, tamanho_coluna)
+                    writer.sheets[key].set_column(col_num, col_num, column_size)
 
 
 vendas, gastos_variaveis, gastos_fixos = read_excel()

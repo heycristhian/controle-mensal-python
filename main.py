@@ -1,4 +1,3 @@
-import json
 import math
 import os
 
@@ -90,7 +89,6 @@ def generate_excel(months):
 vendas, gastos_variaveis, gastos_fixos = read_excel()
 vendas['ano_mes'] = vendas['DATA ENTREGA'].dt.strftime('%Y-%m')
 
-
 print(vendas.head())
 print()
 print(gastos_variaveis.head())
@@ -111,12 +109,14 @@ for index, row in vendas.iterrows():
 
         add_months(key, expiration_date, row, count, months, index + 1)
 
+# GERA TOTAL DE CADA MES
+for key in months.keys():
+    print(key)
+    total = sum(item['VALORES'] for item in months[key])
+
+    months[key].append({'VENDAS': '', 'TOTAL': ''})
+    months[key].append({'VENDAS': 'TOTAL DO MES', 'VALORES': total})
+
 months = dict(sorted(months.items()))
 
 generate_excel(months)
-
-# print()
-# print(json.dumps(months, indent=2))
-#
-# print()
-# print(months.keys())

@@ -5,7 +5,8 @@ import pandas as pd
 from dateutil.relativedelta import relativedelta
 
 file_name = '01.xlsx'
-file_path = f'./data/{file_name}'
+path = './content/drive/MyDrive/CALCULO_MENSAL'
+file_path = f'{path}/{file_name}'
 
 
 def read_excel():
@@ -74,7 +75,7 @@ def generate_excel(months):
 
     months = generate_main_sheets(months, vendas)
 
-    file_path = './data/02.xlsx'
+    file_path = f'{path}/02.xlsx'
 
     if file_exists(file_path):
         with pd.ExcelFile(file_path) as xls:
@@ -111,7 +112,6 @@ for index, row in vendas.iterrows():
 
 # GERA TOTAL DE CADA MES
 for key in months.keys():
-    print(key)
     total = sum(item['VALORES'] for item in months[key])
 
     months[key].append({'VENDAS': '', 'TOTAL': ''})

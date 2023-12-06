@@ -30,10 +30,18 @@ def add_months(key, expiration_date, row, count, months, index):
     })
 
 
-def generate_main_sheets(writer):
-    vendas.to_excel(writer, sheet_name='Vendas', index=False)
-    gastos_variaveis.to_excel(writer, sheet_name='Gastos variaveis', index=False)
-    gastos_fixos.to_excel(writer, sheet_name='Gastos fixos', index=False)
+def insert_by_position_dict(dictionary, index, df, key):
+    items = list(dictionary.items())
+    items.insert(index, (key, df.to_dict(orient='records')))
+
+    return dict(items)
+
+
+def generate_main_sheets(months, vendas):
+    vendas['DATA ENTREGA'] = vendas['DATA ENTREGA'].dt.strftime('%d/%m/%Y')
+    vendas = vendas.drop('ano_mes', axis=1)
+
+    return insert_by_position_dict(months, 0, vendas, 'VENDAS')
 
 
 def change_column_size(writer, key, df, column_size):
@@ -41,16 +49,16 @@ def change_column_size(writer, key, df, column_size):
         writer.sheets[key].set_column(col_num, col_num, column_size)
 
 
-def copy_exists_plan_to_new_file(xls, writer, column_size):
+def copy_exists_plan_to_new_file(xls, writer, column_size, months):
     for sheet_name in xls.sheet_names:
-        if sheet_name not in months:  # Excluir as planilhas existentes que não estão em months
+        if sheet_name.lower() not in map(str.lower, months):  # Excluir as planilhas existentes que não estão em months
             df = xls.parse(sheet_name)
             df.to_excel(writer, sheet_name=sheet_name, index=False)
 
             change_column_size(writer, sheet_name, df, column_size)
 
 
-def add_new_plans(writer, column_size):
+def add_new_plans(writer, column_size, months):
     for key in months.keys():
         df = pd.DataFrame(months[key])
         df.to_excel(writer, sheet_name=key, index=False)
@@ -62,28 +70,26 @@ def file_exists(file_path):
     return os.path.isfile(file_path)
 
 
-def generate_excel(months, vendas, gastos_variaveis, gastos_fixos):
-    # Tamanho específico que você deseja para a coluna
+def generate_excel(months):
     column_size = 20
 
-    # months['vendas'] = vendas.to_dict(orient='records')
+    months = generate_main_sheets(months, vendas)
 
     file_path = './data/02.xlsx'
 
     if file_exists(file_path):
         with pd.ExcelFile(file_path) as xls:
             with pd.ExcelWriter(file_path, engine='xlsxwriter') as writer:
-                generate_main_sheets(writer)
-                copy_exists_plan_to_new_file(xls, writer, column_size)
-                add_new_plans(writer, column_size)
+                copy_exists_plan_to_new_file(xls, writer, column_size, months)
+                add_new_plans(writer, column_size, months)
     else:
         with pd.ExcelWriter(file_path, engine='xlsxwriter') as writer:
-            generate_main_sheets(writer)
-            add_new_plans(writer, column_size)
+            add_new_plans(writer, column_size, months)
 
 
 vendas, gastos_variaveis, gastos_fixos = read_excel()
 vendas['ano_mes'] = vendas['DATA ENTREGA'].dt.strftime('%Y-%m')
+
 
 print(vendas.head())
 print()
@@ -107,10 +113,10 @@ for index, row in vendas.iterrows():
 
 months = dict(sorted(months.items()))
 
-generate_excel(months, vendas, gastos_variaveis, gastos_fixos)
+generate_excel(months)
 
-print()
-print(json.dumps(months, indent=2))
-
-print()
-print(months.keys())
+# print()
+# print(json.dumps(months, indent=2))
+#
+# print()
+# print(months.keys())

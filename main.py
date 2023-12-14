@@ -37,11 +37,21 @@ def insert_by_position_dict(dictionary, index, df, key):
     return dict(items)
 
 
-def generate_main_sheets(months, vendas):
+def generate_main_sheets(months, vendas, gastos_fixos, gastos_variaveis):
     vendas['DATA ENTREGA'] = vendas['DATA ENTREGA'].dt.strftime('%d/%m/%Y')
     vendas = vendas.drop('ano_mes', axis=1)
 
-    return insert_by_position_dict(months, 0, vendas, 'VENDAS')
+    gastos_fixos['DATA'] = gastos_fixos['DATA'].dt.strftime('%d/%m/%Y')
+    gastos_fixos = gastos_fixos.drop('ano_mes', axis=1)
+
+    gastos_variaveis['DATA'] = gastos_variaveis['DATA'].dt.strftime('%d/%m/%Y')
+    gastos_variaveis = gastos_variaveis.drop('ano_mes', axis=1)
+
+    months = insert_by_position_dict(months, 0, vendas, 'VENDAS')
+    months = insert_by_position_dict(months, 1, gastos_variaveis, 'GASTOS VARIAVEIS')
+    months = insert_by_position_dict(months, 2, gastos_fixos, 'GASTOS FIXOS')
+
+    return months
 
 
 def change_column_size(writer, key, df, column_size):
@@ -70,10 +80,10 @@ def file_exists(file_path):
     return os.path.isfile(file_path)
 
 
-def generate_excel(months):
+def generate_excel(months, gastos_fixos, gastos_variaveis):
     column_size = 20
 
-    months = generate_main_sheets(months, vendas)
+    months = generate_main_sheets(months, vendas, gastos_fixos, gastos_variaveis)
 
     file_path = f'{path}/02.xlsx'
 
@@ -89,6 +99,8 @@ def generate_excel(months):
 
 vendas, gastos_variaveis, gastos_fixos = read_excel()
 vendas['ano_mes'] = vendas['DATA ENTREGA'].dt.strftime('%Y-%m')
+gastos_variaveis['ano_mes'] = gastos_variaveis['DATA'].dt.strftime('%Y-%m')
+gastos_fixos['ano_mes'] = gastos_fixos['DATA'].dt.strftime('%Y-%m')
 
 print(vendas.head())
 print()
@@ -112,11 +124,20 @@ for index, row in vendas.iterrows():
 
 # GERA TOTAL DE CADA MES
 for key in months.keys():
-    total = sum(item['VALORES'] for item in months[key])
+    total = float(sum(item['VALORES'] for item in months[key]))
+
+    total_variaveis = float(gastos_variaveis.loc[gastos_variaveis['ano_mes'] == key, 'VALORES'].sum())
+    total_fixo = float(gastos_fixos.loc[gastos_fixos['ano_mes'] == key, 'VALORES'].sum())
+
+    total = total - total_fixo - total_variaveis
+
+    months[key].append({'VENDAS': '', 'TOTAL': ''})
+    months[key].append({'VENDAS': 'GASTOS FIXOS', 'VALORES': total_fixo})
+    months[key].append({'VENDAS': 'GASTOS VARIAVEIS', 'VALORES': total_variaveis})
 
     months[key].append({'VENDAS': '', 'TOTAL': ''})
     months[key].append({'VENDAS': 'TOTAL DO MES', 'VALORES': total})
 
 months = dict(sorted(months.items()))
 
-generate_excel(months)
+generate_excel(months, gastos_fixos, gastos_variaveis)
